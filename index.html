@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Location Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            padding-top: 20px;
+        }
+        .button-container {
+            position: -webkit-sticky; /* Safari */
+            position: sticky;
+            top: 0;
+            background-color: #f4f4f4;
+            padding: 10px 0;
+            margin-bottom: 20px;
+            z-index: 1000;
+            border-bottom: 1px solid #ddd;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: -webkit-sticky; /* Safari */
+            position: sticky;
+            top: 50px; /* Adjust according to the height of the sticky button container */
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Device Location Tracker</h1>
+
+    <div class="button-container">
+        <button onclick="refreshPage()">Refresh Page</button>
+        <button onclick="resetPage()">Reset Page</button>
+    </div>
+
+    <h2>Location History:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Time</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Altitude</th>
+            </tr>
+        </thead>
+        <tbody id="locationHistory">
+            <!-- Location history will be appended here -->
+        </tbody>
+    </table>
+
+    <script>
+        let currentLocation = {};
+        const locationHistory = JSON.parse(localStorage.getItem('locationHistory')) || [];
+
+        function showPosition(position) {
+            currentLocation = {
+                x: position.coords.latitude,
+                y: position.coords.longitude,
+                z: position.coords.altitude || 0  // altitude might be null
+            };
+            const dateTime = new Date().toLocaleString();
+            locationHistory.push({
+                dateTime: dateTime,
+                ...currentLocation
+            });
+            localStorage.setItem('locationHistory', JSON.stringify(locationHistory));
+            appendToLocationHistoryTable(dateTime, currentLocation);
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("User denied the request for Geolocation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("Location information is unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    alert("The request to get user location timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("An unknown error occurred.");
+                    break;
+            }
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function appendToLocationHistoryTable(dateTime, location) {
+            const tableBody = document.getElementById('locationHistory');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${dateTime}</td>
+                <td>${location.x}</td>
+                <td>${location.y}</td>
+                <td>${location.z}</td>
+            `;
+            tableBody.appendChild(newRow);
+        }
+
+        function populateLocationHistoryTable() {
+            const tableBody = document.getElementById('locationHistory');
+            tableBody.innerHTML = '';
+            locationHistory.forEach(entry => {
+                appendToLocationHistoryTable(entry.dateTime, entry);
+            });
+        }
+
+        function refreshPage() {
+            window.location.reload();
+        }
+
+        function resetPage() {
+            localStorage.removeItem('locationHistory');
+            locationHistory.length = 0;
+            populateLocationHistoryTable();
+        }
+
+        function requestFullScreen() {
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) {
+                docElm.requestFullscreen();
+            } else if (docElm.mozRequestFullScreen) { // Firefox
+                docElm.mozRequestFullScreen();
+            } else if (docElm.webkitRequestFullScreen) { // Chrome, Safari, and Opera
+                docElm.webkitRequestFullScreen();
+            } else if (docElm.msRequestFullscreen) { // IE/Edge
+                docElm.msRequestFullscreen();
+            }
+        }
+
+        // Populate the location history table on page load
+        populateLocationHistoryTable();
+
+        // Get the current location when the page loads
+        getLocation();
+
+        // Request full screen when the page loads
+        window.onload = requestFullScreen;
+    </script>
+</body>
+</html>
